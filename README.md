@@ -22,6 +22,16 @@ cd backend/expense-manager-api
 ./gradlew bootRun
 ```
 
+### Run Both (Windows PowerShell)
+
+To launch the backend and frontend simultaneously in separate PowerShell windows, from the repository root run:
+
+```powershell
+.\run-dev.ps1
+```
+
+This will open two new PowerShell windows: one running the Spring Boot backend (port 8080) and one running the Vite dev server (port 5173).
+
 ## Technology Stack
 
 ### Frontend

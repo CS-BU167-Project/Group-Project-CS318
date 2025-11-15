@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from './api';
 
 function Register() {
+  const [name, setName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -17,11 +19,19 @@ function Register() {
       setError('Passwords do not match');
       return;
     }
+    if (!name.trim()) {
+      setError('Name is required');
+      return;
+    }
     try {
-      await authAPI.register(email, password);
-      navigate('/login');
+      setLoading(true);
+      setError('');
+      await authAPI.signup(email, password, name);
+      navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Registration failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -32,6 +42,10 @@ function Register() {
         <h2>Register</h2>
         {error && <p style={{ color: 'red' }}>{error}</p>}
         <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label>Full Name:</label>
+            <input type="text" value={name} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)} placeholder="Enter your full name" className="input-field" required />
+          </div>
           <div className="form-group">
             <label>Email:</label>
             <input type="email" value={email} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} placeholder="Enter your email" className="input-field" required />
@@ -54,7 +68,7 @@ function Register() {
               </span>
             </div>
           </div>
-          <button type="submit" className="submit-button">Register</button>
+          <button type="submit" className="submit-button" disabled={loading}>{loading ? 'Registering...' : 'Register'}</button>
         </form>
         <button onClick={() => navigate('/')} className="back-button">Back</button>
         <p>Already have an account? <Link to="/login">Login</Link></p>

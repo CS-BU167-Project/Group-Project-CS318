@@ -1,13 +1,6 @@
+// This file was left intentionally minimal after moving the main application class.
 package com.personal.expense.expensemanagerapi;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-
-@SpringBootApplication
 public class PersonalExpenseManagerApiApplication {
-
-	public static void main(String[] args) {
-		SpringApplication.run(PersonalExpenseManagerApiApplication.class, args);
-	}
-
+    // placeholder to avoid duplicate main class during local edits
 }

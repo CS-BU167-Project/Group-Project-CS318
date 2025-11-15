@@ -7,16 +7,20 @@ function Login() {
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
-      const data = await authAPI.login(email, password);
-      localStorage.setItem('token', data.token);
+      setLoading(true);
+      setError('');
+      await authAPI.signin(email, password);
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -40,7 +44,7 @@ function Login() {
               </span>
             </div>
           </div>
-          <button type="submit" className="submit-button">Login</button>
+          <button type="submit" className="submit-button" disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
         </form>
         <button onClick={() => navigate('/')} className="back-button">Back</button>
         <p>Don't have an account? <Link to="/register">Register</Link></p>
