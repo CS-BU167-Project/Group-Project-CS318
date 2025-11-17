@@ -46,6 +46,10 @@ export const authAPI = {
     localStorage.setItem('token', response.data.token);
     return response.data;
   },
+  getProfile: async () => {
+    const response = await api.get('/auth/profile');
+    return response.data;
+  },
 };
 
 // Expense API
