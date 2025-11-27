@@ -35,8 +35,7 @@ api.interceptors.response.use(
 
 // Authentication API
 export const authAPI = {
-  signup: async (email: string, password: string, name: string) => {
-    const [firstname, lastname] = name.split(' ').length > 1 ? name.split(' ', 2) : [name, ''];
+  signup: async (email: string, password: string, firstname: string, lastname: string) => {
     const response = await api.post('/auth/signup', { email, password, firstname, lastname });
     localStorage.setItem('token', response.data.token);
     return response.data;
@@ -48,6 +47,10 @@ export const authAPI = {
   },
   getProfile: async () => {
     const response = await api.get('/auth/profile');
+    return response.data;
+  },
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await api.post('/auth/change-password', { currentPassword, newPassword });
     return response.data;
   },
 };

@@ -1,94 +1,99 @@
-# Group-Project-CS318
+# Personal Expense Manager
 
-A full-stack expense management application with React frontend and Spring Boot backend.
+A modern, full-stack expense management application built with React, Spring Boot, and Tailwind CSS. Features a sleek glassmorphism UI, interactive charts, and secure authentication.
 
-## Project Structure
+## 🚀 Key Features
 
-- **frontend/** - React + TypeScript + Vite frontend application
-- **backend/** - Spring Boot backend API with PostgreSQL
+### User Interface & Experience
+- **Modern Design:** Glassmorphism aesthetic with dynamic wavy backgrounds and smooth animations.
+- **Interactive Dashboard:** Visual data representation using Recharts (Area charts, Pie charts).
+- **Responsive Layout:** Fully responsive design that works seamlessly on desktop and mobile.
+- **Global Loading States:** Smooth transitions and loading overlays.
 
-## Quick Start
+### Authentication & Security
+- **Secure Auth:** JWT-based authentication with Spring Security.
+- **User Management:** Registration, Login, and Profile management.
+- **Password Security:** BCrypt password encryption and secure password change functionality.
+
+### Expense Management
+- **CRUD Operations:** Create, Read, Update, and Delete expenses.
+- **Categorization:** Organize expenses by categories (Food, Transport, Entertainment, etc.).
+- **Smart Reporting:** Daily, Weekly, and Monthly expense summaries.
+- **Live Updates:** Real-time UI updates upon data changes.
+
+## 🛠️ Technology Stack
 
 ### Frontend
+- **Framework:** React 18+ with TypeScript & Vite
+- **Styling:** Tailwind CSS, Tailwind Animate
+- **UI Components:** Shadcn UI (WavyBackground), Lucide React (Icons)
+- **Visualization:** Recharts
+- **State Management:** React Hooks
+- **HTTP Client:** Axios
+
+### Backend
+- **Framework:** Spring Boot 3.5.7
+- **Language:** Java 21
+- **Security:** Spring Security with JWT
+- **Database:** SQLite (Zero-config local database)
+- **Build Tool:** Gradle
+
+## 🏁 Quick Start
+
+### Prerequisites
+- Node.js 16+
+- Java 21
+- Gradle (included via wrapper)
+
+### One-Click Start (Windows)
+Run the included batch file to start both backend and frontend servers:
+```bat
+.\start-app.bat
+```
+
+### Manual Setup
+
+#### Backend
+```bash
+cd backend/expense-manager-api
+./gradlew bootRun
+```
+The API will start at `http://localhost:8080`.
+
+#### Frontend
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
+The UI will start at `http://localhost:5173`.
 
-### Backend
-```bash
-cd backend/expense-manager-api
-./gradlew bootRun
+## 📂 Project Structure
+
+```
+Group-Project-CS318/
+├── backend/                # Spring Boot Application
+│   └── expense-manager-api/
+│       ├── src/            # Java Source Code
+│       └── build.gradle    # Backend Dependencies
+├── frontend/               # React Application
+│   ├── src/                # Components, Hooks, Pages
+│   │   ├── components/     # UI Components (Shadcn, etc.)
+│   │   ├── Dashboard.tsx   # Main Dashboard
+│   │   ├── Profile.tsx     # User Profile
+│   │   └── ...
+│   └── package.json        # Frontend Dependencies
+├── start-app.bat           # Windows Startup Script
+└── README.md               # Project Documentation
 ```
 
-### Run Both (Windows PowerShell)
-
-To launch the backend and frontend simultaneously in separate PowerShell windows, from the repository root run:
-
-```powershell
-.\run-dev.ps1
-```
-
-This will open two new PowerShell windows: one running the Spring Boot backend (port 8080) and one running the Vite dev server (port 5173).
-
-## Technology Stack
-
-### Frontend
-- React 18+
-- TypeScript
-- Vite
-- ESLint
-
-### Backend
-- Spring Boot 3.5.7
-- Spring Data JPA
-- Spring Security with JWT
-- SQLite
-- Java 21
-
-## Prerequisites
-
-- Node.js 16+
-- Java 21
-- Gradle (included via wrapper)
-
-## Database Setup
-
-The backend uses SQLite with a local database file `expense_manager.db` created automatically in the backend directory. No setup is required - the database will be created on first run.
-
-## Key Features
-
-### Authentication
-- User registration and login
-- JWT-based authentication
-- Password encryption with BCrypt
-- Secure API endpoints
-
-### Expense Management
-- CRUD operations for expenses
-- Expense categorization
-- Date-based expense tracking
-- User-specific expense isolation
-
-### Reporting
-- Daily expense reports
-- Weekly expense reports
-- Monthly expense reports
-- Category-based expense summaries
-
-### User Interface
-- Responsive design with animations
-- Landing page
-- Login and registration forms
-- Dashboard (basic implementation)
-- Loading states and error handling
-
-## API Endpoints
+## 🔌 API Endpoints
 
 ### Authentication
 - `POST /api/v1/auth/signup` - Register new user
 - `POST /api/v1/auth/signin` - Login user
+- `GET /api/v1/auth/profile` - Get current user profile
+- `POST /api/v1/auth/change-password` - Change user password
 
 ### Expenses
 - `GET /api/v1/expenses` - Get all expenses
@@ -98,6 +103,18 @@ The backend uses SQLite with a local database file `expense_manager.db` created 
 - `DELETE /api/v1/expenses/{id}` - Delete expense
 
 ### Reports
+- `GET /api/v1/reports/daily` - Daily expense breakdown
+- `GET /api/v1/reports/weekly` - Weekly expense breakdown
+- `GET /api/v1/reports/monthly` - Monthly expense breakdown
+- `GET /api/v1/reports/summary` - Category-wise summary
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 - `GET /api/v1/reports/daily?userId={userId}` - Daily report
 - `GET /api/v1/reports/weekly?userId={userId}` - Weekly report
 - `GET /api/v1/reports/monthly?userId={userId}` - Monthly report

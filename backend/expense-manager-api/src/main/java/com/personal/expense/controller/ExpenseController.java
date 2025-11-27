@@ -43,6 +43,7 @@ public class ExpenseController {
         expense.setDescription(expenseDetails.getDescription());
         expense.setAmount(expenseDetails.getAmount());
         expense.setDate(expenseDetails.getDate());
+        expense.setTime(expenseDetails.getTime());
         expense.setUser(expenseDetails.getUser());
         expense.setCategory(expenseDetails.getCategory());
         return ResponseEntity.ok(expenseService.save(expense));

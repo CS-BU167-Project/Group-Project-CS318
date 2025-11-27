@@ -8,13 +8,18 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "expenses")
+@Table(name = "expenses", indexes = {
+    @Index(name = "idx_expense_user", columnList = "user_id"),
+    @Index(name = "idx_expense_date", columnList = "date"),
+    @Index(name = "idx_expense_category", columnList = "category_id")
+})
 public class Expense {
 
     @Id
@@ -29,6 +34,9 @@ public class Expense {
 
     @Column(nullable = false)
     private LocalDate date;
+
+    @Column
+    private LocalTime time;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)

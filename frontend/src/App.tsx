@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import Landing from './Landing';
 import Login from './Login';
 import Register from './Register';
@@ -8,65 +8,36 @@ import Dashboard from './Dashboard';
 import Profile from './Profile';
 import './App.css';
 
-const loginVariants = {
-  initial: { opacity: 0, x: -100 },
-  in: { opacity: 1, x: 0 },
-  out: { opacity: 0, x: -300 }
-};
-
-const registerVariants = {
-  initial: { opacity: 0, x: 100 },
-  in: { opacity: 1, x: 0 },
-  out: { opacity: 0, x: 300 }
-};
-
-const dashboardVariants = {
-  initial: { opacity: 0, y: 100 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: -100 }
-};
-
-const landingVariants = {
-  initial: { opacity: 0, y: -100 },
-  in: { opacity: 1, y: 0 },
-  out: { opacity: 0, y: 100 }
-};
-
-const profileVariants = {
-  initial: { opacity: 0, x: 100 },
-  in: { opacity: 1, x: 0 },
-  out: { opacity: 0, x: -100 }
-};
-
-const LoadingComponent = () => (
-  <div className="loading-container">
-    <div className="loading-spinner"></div>
-    <p>Loading...</p>
-  </div>
-);
-
-function App() {
-  const location = useLocation();
+function AppContent() {
   const [isLoading, setIsLoading] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 500);
+    const timer = setTimeout(() => {
+      setIsLoading(false);
+    }, 800); // Short delay to show animation
+
     return () => clearTimeout(timer);
   }, [location.pathname]);
 
   return (
     <>
-      {isLoading && <LoadingComponent />}
-      <AnimatePresence mode="wait">
-        <Routes location={location} key={location.pathname}>
-        <Route path="/" element={<motion.div variants={landingVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "easeInOut", duration: 0.6 }}><Landing /></motion.div>} />
-        <Route path="/login" element={<motion.div variants={loginVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "easeInOut", duration: 0.6 }}><Login /></motion.div>} />
-        <Route path="/register" element={<motion.div variants={registerVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "easeInOut", duration: 0.6 }}><Register /></motion.div>} />
-        <Route path="/dashboard" element={<motion.div variants={dashboardVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "easeInOut", duration: 0.6 }}><Dashboard /></motion.div>} />
-        <Route path="/profile" element={<motion.div variants={profileVariants} initial="initial" animate="in" exit="out" transition={{ type: "tween", ease: "easeInOut", duration: 0.6 }}><Profile /></motion.div>} />
-        </Routes>
-      </AnimatePresence>
+      {isLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="h-12 w-12 animate-spin text-green-500" />
+            <p className="text-lg font-medium text-white animate-pulse">Loading...</p>
+          </div>
+        </div>
+      )}
+      <Routes>
+        <Route path="/" element={<Landing />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/profile" element={<Profile />} />
+      </Routes>
     </>
   );
 }
@@ -74,7 +45,7 @@ function App() {
 function AppWrapper() {
   return (
     <Router>
-      <App />
+      <AppContent />
     </Router>
   );
 }

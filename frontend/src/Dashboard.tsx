@@ -1,11 +1,31 @@
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { useDashboardData } from './hooks/useDashboardData';
 import { Expense, DailyReport, WeeklyReport, MonthlyReport, CategorySummary } from './types';
 import { expenseAPI, reportAPI } from './api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import { WavyBackground } from "@/components/ui/shadcn-io/wavy-background";
+import { 
+  LogOut, 
+  User as UserIcon, 
+  Plus, 
+  Wallet, 
+  TrendingUp, 
+  PieChart as PieChartIcon, 
+  Calendar,
+  Trash2,
+  Edit2,
+  DollarSign,
+  CreditCard,
+  Activity,
+  Download
+} from 'lucide-react';
 
-const categories = ['Food', 'Transport', 'Entertainment', 'Other'];
+const WAVY_COLORS = ["#22d3ee", "#4ade80", "#2563eb"];
+
+const categories = ['Food', 'Transport', 'Entertainment', 'Utilities', 'Shopping', 'Health', 'Education', 'Travel', 'Other'];
 
 function Main() {
   const navigate = useNavigate();
@@ -16,19 +36,122 @@ function Main() {
     description: '',
     amount: '',
     date: '',
+    time: '',
     categoryName: categories[0],
   });
 
   const [errorMessage, setErrorMessage] = useState('');
 
-  const [dailyReport, setDailyReport] = useState<DailyReport>({});
-  const [weeklyReport, setWeeklyReport] = useState<WeeklyReport>({});
-  const [monthlyReport, setMonthlyReport] = useState<MonthlyReport>({});
-  const [categorySummary, setCategorySummary] = useState<CategorySummary>({});
+  const [chartTab, setChartTab] = useState<'daily' | 'weekly' | 'monthly' | 'category'>('monthly');
+  const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
 
   const handleLogout = () => {
     localStorage.removeItem('token');
     navigate('/login');
+  };
+
+  const handleDownloadPDF = async () => {
+    const chartsElement = document.getElementById('charts-section');
+    const historyElement = document.getElementById('history-section');
+    
+    if (!chartsElement || !historyElement) return;
+
+    try {
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 15;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Header Background
+      pdf.setFillColor(16, 185, 129); // Emerald-500
+      pdf.rect(0, 0, pageWidth, 20, 'F');
+      
+      // Header Text
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Personal Expense Manager', margin, 13);
+
+      // Report Info
+      pdf.setTextColor(30, 41, 59); // Slate-800
+      pdf.setFontSize(14);
+      pdf.text(`Monthly Report: ${new Date(selectedMonth).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}`, margin, 35);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(100, 116, 139); // Slate-500
+      pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, margin, 42);
+
+      let currentY = 55;
+
+      // Capture Charts
+      const chartsCanvas = await html2canvas(chartsElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#0f172a' // slate-900
+      });
+      
+      const chartsImgData = chartsCanvas.toDataURL('image/png');
+      const chartsHeight = (chartsCanvas.height * contentWidth) / chartsCanvas.width;
+      
+      pdf.setFontSize(12);
+      pdf.setTextColor(15, 23, 42); // Slate-900
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Analytics Overview', margin, currentY - 5);
+      
+      pdf.addImage(chartsImgData, 'PNG', margin, currentY, contentWidth, chartsHeight);
+      currentY += chartsHeight + 15;
+
+      // Capture History
+      const historyCanvas = await html2canvas(historyElement, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#0f172a' // slate-900
+      });
+
+      const historyImgData = historyCanvas.toDataURL('image/png');
+      const historyHeight = (historyCanvas.height * contentWidth) / historyCanvas.width;
+      
+      // Check if history fits on the same page
+      if (currentY + historyHeight + 20 > pageHeight - margin) {
+        pdf.addPage();
+        currentY = margin + 10;
+        
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Transaction History', margin, currentY - 5);
+        
+        pdf.addImage(historyImgData, 'PNG', margin, currentY, contentWidth, historyHeight);
+      } else {
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('Transaction History', margin, currentY - 5);
+        
+        pdf.addImage(historyImgData, 'PNG', margin, currentY, contentWidth, historyHeight);
+      }
+      
+      // Footer with page numbers
+      const pageCount = pdf.getNumberOfPages();
+      for(let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(8);
+        pdf.setTextColor(148, 163, 184); // Slate-400
+        pdf.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 10, { align: 'right' });
+      }
+      
+      pdf.save(`expense-report-${selectedMonth}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
   };
 
   const handleProfile = () => {
@@ -37,10 +160,14 @@ function Main() {
 
   const handleAddExpense = () => {
     setEditingExpense(null);
+    const now = new Date();
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toTimeString().slice(0, 5);
     setFormData({
       description: '',
       amount: '',
-      date: '',
+      date: dateStr,
+      time: timeStr,
       categoryName: categories[0],
     });
     setShowModal(true);
@@ -52,6 +179,7 @@ function Main() {
       description: expense.description,
       amount: expense.amount.toString(),
       date: expense.date,
+      time: expense.time ? expense.time.substring(0, 5) : '00:00',
       categoryName: expense.category.name,
     });
     setShowModal(true);
@@ -83,6 +211,7 @@ function Main() {
       description: formData.description,
       amount: amount,
       date: formData.date,
+      time: formData.time,
       user: user,
       category: { name: formData.categoryName },
     };
@@ -110,210 +239,526 @@ function Main() {
 
   useEffect(() => {
     if (user) {
-      const fetchReports = async () => {
-        try {
-          const daily = await reportAPI.getDailyReport(user.id);
-          setDailyReport(daily);
-          const weekly = await reportAPI.getWeeklyReport(user.id);
-          setWeeklyReport(weekly);
-          const monthly = await reportAPI.getMonthlyReport(user.id);
-          setMonthlyReport(monthly);
-          const summary = await reportAPI.getSummary(user.id);
-          const catSummary: CategorySummary = {};
-          for (const [key, value] of Object.entries(summary)) {
-            catSummary[key] = typeof value === 'number' ? value : parseFloat(String(value));
-          }
-          setCategorySummary(catSummary);
-        } catch (error) {
-          console.error('Error fetching reports:', error);
-        }
-      };
-      fetchReports();
+      // We only need to fetch all expenses now, as we calculate reports client-side
+      // But we keep refreshData in useDashboardData which fetches everything.
+      // The hook useDashboardData already fetches expenses on mount.
     }
   }, [user]);
 
-  const dailyData = Object.entries(dailyReport).map(([date, expenses]) => ({
-    date: new Date(date).toLocaleDateString(),
-    amount: expenses.reduce((sum, exp) => sum + exp.amount, 0)
-  }));
+  const dailyData = useMemo(() => {
+    const filtered = expenses.filter(e => e.date.startsWith(selectedMonth));
+    const hourlyData: { [key: string]: number } = {};
+    
+    // Initialize all hours with 0
+    for (let i = 0; i < 24; i++) {
+      const hour = i.toString().padStart(2, '0') + ':00';
+      hourlyData[hour] = 0;
+    }
 
-  const weeklyData = Object.entries(weeklyReport).map(([date, expenses]) => ({
-    date: new Date(date).toLocaleDateString(),
-    amount: expenses.reduce((sum, exp) => sum + exp.amount, 0)
-  }));
+    // Aggregate expenses by hour
+    filtered.forEach(exp => {
+      const hour = exp.time ? exp.time.substring(0, 2) + ':00' : '00:00';
+      if (hourlyData[hour] !== undefined) {
+        hourlyData[hour] += exp.amount;
+      }
+    });
 
-  const monthlyData = Object.entries(monthlyReport).map(([date, expenses]) => ({
-    date: new Date(date).toLocaleDateString(),
-    amount: expenses.reduce((sum, exp) => sum + exp.amount, 0)
-  }));
+    return Object.entries(hourlyData).map(([time, amount]) => ({
+      date: time,
+      amount: amount
+    })).sort((a, b) => a.date.localeCompare(b.date));
+  }, [expenses, selectedMonth]);
 
-  const pieData = Object.entries(categorySummary).map(([name, value]) => ({ name, value }));
+  const weeklyData = useMemo(() => {
+    const filtered = expenses.filter(e => e.date.startsWith(selectedMonth));
+    const grouped: Record<string, number> = {};
+    
+    filtered.forEach(e => {
+      const date = new Date(e.date);
+      const day = date.getDate();
+      // Calculate week number (1-5)
+      const week = Math.ceil(day / 7);
+      const key = `Week ${week}`;
+      grouped[key] = (grouped[key] || 0) + e.amount;
+    });
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+    // Ensure all weeks are present if needed, or just show weeks with data
+    // Let's show weeks 1-4/5
+    const result = [];
+    for(let i=1; i<=5; i++) {
+      const key = `Week ${i}`;
+      if (grouped[key] !== undefined || i <= 4) { // Show at least 4 weeks
+         result.push({ date: key, amount: grouped[key] || 0 });
+      }
+    }
+    return result;
+  }, [expenses, selectedMonth]);
+
+  const monthlyData = useMemo(() => {
+    const filtered = expenses.filter(e => e.date.startsWith(selectedMonth));
+    const grouped: Record<string, number> = {};
+    
+    filtered.forEach(e => {
+      grouped[e.date] = (grouped[e.date] || 0) + e.amount;
+    });
+
+    return Object.entries(grouped)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([date, amount]) => ({
+        date: new Date(date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+        amount
+      }));
+  }, [expenses, selectedMonth]);
+
+  const pieData = useMemo(() => {
+    const filtered = expenses.filter(e => e.date.startsWith(selectedMonth));
+    const grouped: Record<string, number> = {};
+    
+    filtered.forEach(e => {
+      grouped[e.category.name] = (grouped[e.category.name] || 0) + e.amount;
+    });
+
+    return Object.entries(grouped).map(([name, value]) => ({ name, value }));
+  }, [expenses, selectedMonth]);
+
+  const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   const totalExpenses = expenses.reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
+  const selectedMonthTotal = expenses
+    .filter(e => e.date.startsWith(selectedMonth))
+    .reduce((sum, exp) => sum + exp.amount, 0);
   const categoryCount = Object.keys(summary).length;
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="main-container">
-      <header className="dashboard-header">
-        <h2 className="dashboard-title">Personal Finance Tracker</h2>
-        <div className="header-buttons">
-          <button onClick={handleProfile} className="profile-button">
-            Profile
-          </button>
-          <button onClick={handleLogout} className="logout-button">
-            Logout
-          </button>
-        </div>
-        <div className="dashboard-grid" style={{marginTop: '15px'}}>
-          <div className="summary-card">
-            <h3>Total Expenses</h3>
-            <p className="amount">${totalExpenses.toFixed(2)}</p>
-          </div>
-          <div className="summary-card">
-            <h3>This Month</h3>
-            <p className="amount">${monthlyTotal.toFixed(2)}</p>
-          </div>
-          <div className="summary-card">
-            <h3>Categories</h3>
-            <p>{categoryCount} active</p>
-          </div>
-        </div>
-      </header>
-      
-      <section className="transactions-section">
-        <div className="transactions-header">
-          <h3>Your Transactions</h3>
-          <button onClick={handleAddExpense} className="add-expense-button">
-            Add Expense
-          </button>
-        </div>
-        <div className="transactions-list">
-          {expenses.length > 0 ? (
-            expenses.map((expense) => (
-              <div key={expense.id} className="transaction-item">
-                <div className="transaction-info">
-                  <strong>{expense.description}</strong>
-                  <p>{expense.category.name} - {new Date(expense.date).toLocaleDateString()}</p>
-                </div>
-                <div className="transaction-actions">
-                  <div className="transaction-amount">${expense.amount.toFixed(2)}</div>
-                  <button onClick={() => handleEditExpense(expense)} className="edit-button">Edit</button>
-                  <button onClick={() => handleDeleteExpense(expense.id)} className="delete-button">Delete</button>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p style={{ textAlign: 'center', color: '#666' }}>No transactions yet. Add your first expense!</p>
-          )}
-        </div>
-      </section>
-
-      <section className="charts-section">
-        <h3>Expense Reports</h3>
-        <div className="charts-grid" style={{display: 'flex', flexDirection: 'row', flexWrap: 'wrap', gap: '10px'}}>
-          <div className="chart-card">
-            <h4>Daily Expenses</h4>
-            <LineChart width={300} height={200} data={dailyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="amount" stroke="#8884d8" />
-            </LineChart>
-          </div>
-          <div className="chart-card">
-            <h4>Weekly Expenses</h4>
-            <LineChart width={300} height={200} data={weeklyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="amount" stroke="#82ca9d" />
-            </LineChart>
-          </div>
-          <div className="chart-card">
-            <h4>Monthly Expenses</h4>
-            <LineChart width={300} height={200} data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="amount" stroke="#ffc658" />
-            </LineChart>
-          </div>
-          <div className="chart-card">
-            <h4>Expenses by Category</h4>
-            <PieChart width={300} height={200}>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => percent != null ? `${name} ${(percent * 100).toFixed(0)}%` : name}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {pieData.map((_, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </div>
-        </div>
-      </section>
-
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div className="modal-header">
-              <h3 className="modal-title">{editingExpense ? 'Edit Expense' : 'Add Expense'}</h3>
-              <button type="button" className="close-button" onClick={() => setShowModal(false)}>×</button>
+    <WavyBackground 
+      className="w-full h-full flex flex-col overflow-y-auto"
+      containerClassName="h-screen"
+      backgroundFill="black"
+      colors={WAVY_COLORS}
+      waveOpacity={0.3}
+      blur={10}
+    >
+      <div id="dashboard-content" className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <header className="flex justify-between items-center mb-12">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <Wallet className="w-6 h-6 text-white" />
             </div>
-            <form className="expense-form" onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label>Description:</label>
-                <input type="text" name="description" value={formData.description} onChange={handleInputChange} required className="form-input" style={{color: 'black'}} />
+            <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-full border border-slate-700/50 backdrop-blur-sm">
+              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+              <span className="text-slate-300 text-sm font-medium">Live Updates</span>
+            </div>
+            <button 
+              onClick={handleDownloadPDF}
+              className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 shadow-lg"
+              title="Download PDF"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+            <button 
+              onClick={() => navigate('/profile')}
+              className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 shadow-lg"
+            >
+              <UserIcon className="w-5 h-5" />
+            </button>
+            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-all border border-red-500/20">
+              <LogOut className="w-4 h-4" />
+              <span>Logout</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <DollarSign className="w-24 h-24 text-green-400" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Total Expenses</h3>
+              <p className="text-4xl font-bold text-white">${totalExpenses.toFixed(2)}</p>
+              <div className="mt-4 flex items-center gap-2 text-green-400 text-sm">
+                <TrendingUp className="w-4 h-4" />
+                <span>Lifetime spending</span>
               </div>
-              <div className="form-group">
-                <label>Amount:</label>
-                <input type="number" name="amount" value={formData.amount} onChange={handleInputChange} required step="0.01" className="form-input" style={{color: 'black', WebkitAppearance: 'none', MozAppearance: 'textfield'}} />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Calendar className="w-24 h-24 text-blue-400" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Selected Month</h3>
+              <p className="text-4xl font-bold text-white">${selectedMonthTotal.toFixed(2)}</p>
+              <div className="mt-4 flex items-center gap-2 text-blue-400 text-sm">
+                <Activity className="w-4 h-4" />
+                <span>{new Date(selectedMonth).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
               </div>
-              <div className="form-group">
-                <label>Date:</label>
-                <input type="date" name="date" value={formData.date} onChange={handleInputChange} required className="form-input" style={{color: 'black'}} />
+            </div>
+          </div>
+
+          <div className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <PieChartIcon className="w-24 h-24 text-purple-400" />
+            </div>
+            <div className="relative z-10">
+              <h3 className="text-slate-400 text-sm font-medium uppercase tracking-wider mb-1">Categories</h3>
+              <p className="text-4xl font-bold text-white">{categoryCount}</p>
+              <div className="mt-4 flex items-center gap-2 text-purple-400 text-sm">
+                <CreditCard className="w-4 h-4" />
+                <span>Active categories</span>
               </div>
-              <div className="form-group">
-                <label>Category:</label>
-                <select name="categoryName" value={formData.categoryName} onChange={handleInputChange} className="form-select" style={{color: 'black'}}>
+            </div>
+          </div>
+        </div>
+        
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+          {/* Charts Section */}
+          <div id="charts-section" className="lg:col-span-2 bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl">
+            <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Activity className="w-5 h-5 text-blue-400" />
+                Analytics
+              </h3>
+              <div className="flex bg-slate-950/50 border border-slate-800/50 p-1.5 rounded-full backdrop-blur-md">
+                {(['daily', 'weekly', 'monthly'] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setChartTab(tab)}
+                    className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
+                      chartTab === tab 
+                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-105' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
+                    }`}
+                  >
+                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-[350px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                {chartTab === 'category' ? (
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={100}
+                      paddingAngle={5}
+                      dataKey="value"
+                    >
+                      {pieData.map((_, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="rgba(0,0,0,0.5)" />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc', borderRadius: '12px' }}
+                      itemStyle={{ color: '#f8fafc' }}
+                    />
+                    <Legend verticalAlign="bottom" height={36} />
+                  </PieChart>
+                ) : (
+                  <AreaChart data={
+                    chartTab === 'daily' ? dailyData :
+                    chartTab === 'weekly' ? weeklyData :
+                    monthlyData
+                  }>
+                    <defs>
+                      <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#64748b" 
+                      fontSize={12} 
+                      tickLine={false}
+                      axisLine={false}
+                      dy={10}
+                    />
+                    <YAxis 
+                      stroke="#64748b" 
+                      fontSize={12} 
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={(value) => `$${value}`}
+                      dx={-10}
+                    />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', color: '#f8fafc', borderRadius: '12px' }}
+                      itemStyle={{ color: '#10b981' }}
+                      formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
+                    />
+                    <Area 
+                      type="monotone" 
+                      dataKey="amount" 
+                      stroke="#10b981" 
+                      strokeWidth={3} 
+                      fillOpacity={1} 
+                      fill="url(#colorAmount)" 
+                    />
+                  </AreaChart>
+                )}
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Recent Transactions & Actions */}
+          <div className="flex flex-col gap-6">
+            {/* Quick Add */}
+            <button 
+              onClick={handleAddExpense}
+              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-3xl font-bold text-lg shadow-xl shadow-emerald-500/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+            >
+              <Plus className="w-6 h-6" />
+              Add New Expense
+            </button>
+
+            {/* Recent List */}
+            <div className="flex-1 bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl overflow-hidden flex flex-col">
+              <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-green-400" />
+                Recent
+              </h3>
+              <div className="overflow-y-auto pr-2 space-y-3 custom-scrollbar flex-1 max-h-[400px]">
+                {expenses.slice(0, 5).map((expense) => (
+                  <div key={expense.id} className="flex items-center justify-between p-3 bg-slate-800/40 rounded-2xl border border-slate-700/30 hover:bg-slate-800/60 transition-colors group">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-xl">
+                        {expense.category.name === 'Food' ? '🍔' : 
+                         expense.category.name === 'Transport' ? '🚗' : 
+                         expense.category.name === 'Entertainment' ? '🎬' : 
+                         expense.category.name === 'Utilities' ? '💡' :
+                         expense.category.name === 'Shopping' ? '🛍️' :
+                         expense.category.name === 'Health' ? '💊' :
+                         expense.category.name === 'Education' ? '📚' :
+                         expense.category.name === 'Travel' ? '✈️' : '📦'}
+                      </div>
+                      <div>
+                        <p className="text-white font-medium text-sm">{expense.description}</p>
+                        <p className="text-slate-400 text-xs">
+                          {new Date(expense.date).toLocaleDateString()}
+                          {expense.time && <span className="ml-1">at {expense.time.substring(0, 5)}</span>}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-white font-bold text-sm">${expense.amount.toFixed(2)}</p>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity justify-end mt-1">
+                        <button 
+                          onClick={() => handleEditExpense(expense)} 
+                          className="p-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 rounded-lg transition-all border border-blue-500/20 hover:border-blue-500/40"
+                          title="Edit"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteExpense(expense.id)} 
+                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {expenses.length === 0 && (
+                  <div className="text-center text-slate-500 py-8">
+                    No transactions yet
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* All Transactions Table */}
+        <section id="history-section" className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl">
+          <div className="flex justify-between items-center mb-6">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <CreditCard className="w-5 h-5 text-purple-400" />
+              Transaction History
+            </h3>
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none"
+            />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-700/50 text-slate-400 text-sm uppercase tracking-wider">
+                  <th className="p-4 font-medium">Description</th>
+                  <th className="p-4 font-medium">Category</th>
+                  <th className="p-4 font-medium">Date</th>
+                  <th className="p-4 font-medium text-right">Amount</th>
+                  <th className="p-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="text-slate-300 divide-y divide-slate-700/30">
+                {expenses
+                  .filter(expense => expense.date.startsWith(selectedMonth))
+                  .map((expense) => (
+                  <tr key={expense.id} className="hover:bg-slate-800/30 transition-colors">
+                    <td className="p-4 font-medium text-white">{expense.description}</td>
+                    <td className="p-4">
+                      <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-800 border border-slate-700 text-slate-300">
+                        {expense.category.name}
+                      </span>
+                    </td>
+                    <td className="p-4 text-slate-400">
+                      {new Date(expense.date).toLocaleDateString()}
+                      {expense.time && <span className="ml-2 text-slate-500 text-xs">{expense.time.substring(0, 5)}</span>}
+                    </td>
+                    <td className="p-4 text-right font-bold text-white">${expense.amount.toFixed(2)}</td>
+                    <td className="p-4 text-right">
+                      <div className="flex justify-end gap-3">
+                        <button 
+                          onClick={() => handleEditExpense(expense)} 
+                          className="group flex items-center gap-2 px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 rounded-lg transition-all border border-blue-500/20 hover:border-blue-500/40"
+                          title="Edit Expense"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">Edit</span>
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteExpense(expense.id)} 
+                          className="group flex items-center gap-2 px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg transition-all border border-red-500/20 hover:border-red-500/40"
+                          title="Delete Expense"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span className="text-xs font-medium">Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {expenses.filter(expense => expense.date.startsWith(selectedMonth)).length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="p-8 text-center text-slate-500">
+                      No transactions found for this month.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all scale-100">
+            <div className="flex justify-center items-center mb-8">
+              <h3 className="text-2xl font-bold text-white">{editingExpense ? 'Edit Expense' : 'New Expense'}</h3>
+            </div>
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Description</label>
+                <input 
+                  type="text" 
+                  name="description" 
+                  value={formData.description} 
+                  onChange={handleInputChange} 
+                  required 
+                  placeholder="e.g. Grocery shopping"
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Amount</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-3 text-slate-500">$</span>
+                    <input 
+                      type="number" 
+                      name="amount" 
+                      value={formData.amount} 
+                      onChange={handleInputChange} 
+                      required 
+                      step="0.01" 
+                      placeholder="0.00"
+                      className="w-full pl-8 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Date</label>
+                  <input 
+                    type="date" 
+                    name="date" 
+                    value={formData.date} 
+                    onChange={handleInputChange} 
+                    required 
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-400 mb-2">Time</label>
+                  <input 
+                    type="time" 
+                    name="time" 
+                    value={formData.time} 
+                    onChange={handleInputChange} 
+                    required 
+                    className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-400 mb-2">Category</label>
+                <select 
+                  name="categoryName" 
+                  value={formData.categoryName} 
+                  onChange={handleInputChange} 
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white transition-all appearance-none"
+                >
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                 </select>
               </div>
-              {errorMessage && <p style={{color: 'red', marginTop: '10px'}}>{errorMessage}</p>}
-              <div className="modal-buttons">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+              {errorMessage && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errorMessage}</p>}
+              <div className="flex gap-3 mt-8">
+                <button 
+                  type="button" 
+                  className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors" 
+                  onClick={() => setShowModal(false)}
+                >
                   Cancel
                 </button>
-                <button type="submit" className="btn-primary">
-                  {editingExpense ? 'Update' : 'Add'}
+                <button 
+                  type="submit" 
+                  className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-emerald-500/20"
+                >
+                  {editingExpense ? 'Save Changes' : 'Add Expense'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-    </div>
+      </WavyBackground>
   );
-}
-
-export default Main;
+}export default Main;

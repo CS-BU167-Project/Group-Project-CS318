@@ -1,5 +1,6 @@
 package com.personal.expense.controller;
 
+import com.personal.expense.model.ChangePasswordRequest;
 import com.personal.expense.model.JwtAuthenticationResponse;
 import com.personal.expense.model.SignInRequest;
 import com.personal.expense.model.SignUpRequest;
@@ -35,5 +36,11 @@ public class AuthController {
     @GetMapping("/profile")
     public ResponseEntity<User> getProfile() {
         return ResponseEntity.ok(userService.getCurrentUser());
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<Void> changePassword(@RequestBody ChangePasswordRequest request) {
+        authenticationService.changePassword(request);
+        return ResponseEntity.ok().build();
     }
 }
