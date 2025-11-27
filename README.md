@@ -28,6 +28,8 @@ A modern, full-stack expense management application built with React, Spring Boo
 - **Styling:** Tailwind CSS, Tailwind Animate
 - **UI Components:** Shadcn UI (WavyBackground), Lucide React (Icons)
 - **Visualization:** Recharts
+- **Animations:** Framer Motion
+- **Reporting:** html2canvas, jsPDF
 - **State Management:** React Hooks
 - **HTTP Client:** Axios
 
@@ -72,19 +74,33 @@ The UI will start at `http://localhost:5173`.
 
 ```
 Group-Project-CS318/
-├── backend/                # Spring Boot Application
-│   └── expense-manager-api/
-│       ├── src/            # Java Source Code
-│       └── build.gradle    # Backend Dependencies
-├── frontend/               # React Application
-│   ├── src/                # Components, Hooks, Pages
-│   │   ├── components/     # UI Components (Shadcn, etc.)
-│   │   ├── Dashboard.tsx   # Main Dashboard
-│   │   ├── Profile.tsx     # User Profile
+├── backend/expense-manager-api/
+│   ├── src/main/java/com/personal/expense/
+│   │   ├── config/         # Security & App Config
+│   │   ├── controller/     # REST API Endpoints
+│   │   ├── model/          # JPA Entities & DTOs
+│   │   ├── repository/     # Data Access Layer
+│   │   └── service/        # Business Logic
+│   └── build.gradle        # Backend Dependencies
+├── frontend/
+│   ├── src/
+│   │   ├── components/ui/  # Reusable UI Components
+│   │   ├── hooks/          # Custom React Hooks
+│   │   ├── lib/            # Utilities (Tailwind, etc.)
+│   │   ├── Dashboard.tsx   # Main Dashboard View
 │   │   └── ...
 │   └── package.json        # Frontend Dependencies
-├── start-app.bat           # Windows Startup Script
+├── start-app.bat           # One-click startup script
 └── README.md               # Project Documentation
+```
+
+## 🧪 Running Tests
+
+### Backend Tests
+Run the JUnit tests for the Spring Boot backend:
+```bash
+cd backend/expense-manager-api
+./gradlew test
 ```
 
 ## 🔌 API Endpoints
