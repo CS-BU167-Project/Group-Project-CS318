@@ -578,12 +578,12 @@ function Main() {
                 <Activity className="w-5 h-5 text-blue-500 dark:text-blue-400" />
                 Analytics
               </h3>
-              <div className="relative bg-slate-100 dark:bg-slate-900/30 backdrop-blur-2xl border border-slate-200 dark:border-white/10 p-1.5 rounded-xl sm:rounded-full overflow-x-auto max-w-full transition-colors">
+              <div className="relative bg-slate-200/60 dark:bg-slate-900/30 backdrop-blur-2xl border border-slate-300 dark:border-white/10 p-1.5 rounded-xl sm:rounded-full overflow-x-auto max-w-full transition-colors">
                 <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
                 <div className="relative z-10 flex items-center min-w-max">
                   <button 
                     onClick={handleDownloadPDF}
-                    className="w-10 h-10 rounded-full flex items-center justify-center text-emerald-500 dark:text-emerald-400 hover:text-emerald-600 dark:hover:text-emerald-300 hover:bg-emerald-500/10 transition-all flex-shrink-0"
+                    className="w-10 h-10 rounded-full flex items-center justify-center bg-white dark:bg-transparent text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 border border-slate-200 dark:border-transparent shadow-sm dark:shadow-none transition-all flex-shrink-0 mr-1"
                     title="Download PDF"
                   >
                     <Download className="w-5 h-5" />
@@ -596,7 +596,7 @@ function Main() {
                       className={`px-4 sm:px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap ${
                         chartTab === tab 
                           ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-105' 
-                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/5'
+                          : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white dark:hover:bg-white/5'
                       }`}
                     >
                       {tab.charAt(0).toUpperCase() + tab.slice(1)}
