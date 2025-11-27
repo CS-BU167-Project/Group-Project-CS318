@@ -22,12 +22,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Optional: handle 401 responses globally (remove token so UI can react)
+// Optional: handle 401/403 responses globally (remove token so UI can react)
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err?.response?.status === 401) {
+    const url = err?.config?.url || '';
+    // Don't redirect for login/signup failures, let the component handle the error
+    if (url.includes('signin') || url.includes('signup') || url.includes('auth')) {
+      return Promise.reject(err);
+    }
+
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
       localStorage.removeItem('token');
+      window.location.href = '/login';
     }
     return Promise.reject(err);
   }
@@ -51,6 +58,20 @@ export const authAPI = {
   },
   changePassword: async (currentPassword: string, newPassword: string) => {
     const response = await api.post('/auth/change-password', { currentPassword, newPassword });
+    return response.data;
+  },
+  updateProfile: async (firstname: string, lastname: string, email: string) => {
+    const response = await api.put('/auth/profile', { firstname, lastname, email });
+    return response.data;
+  },
+  uploadProfilePicture: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await api.post('/auth/profile-picture', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return response.data;
   },
 };
@@ -80,20 +101,20 @@ export const expenseAPI = {
 
 // Report API
 export const reportAPI = {
-  getDailyReport: async (userId: number) => {
-    const response = await api.get('/reports/daily', { params: { userId } });
+  getDailyReport: async () => {
+    const response = await api.get('/reports/daily');
     return response.data;
   },
-  getWeeklyReport: async (userId: number) => {
-    const response = await api.get('/reports/weekly', { params: { userId } });
+  getWeeklyReport: async () => {
+    const response = await api.get('/reports/weekly');
     return response.data;
   },
-  getMonthlyReport: async (userId: number) => {
-    const response = await api.get('/reports/monthly', { params: { userId } });
+  getMonthlyReport: async () => {
+    const response = await api.get('/reports/monthly');
     return response.data;
   },
-  getSummary: async (userId: number) => {
-    const response = await api.get('/reports/summary', { params: { userId } });
+  getSummary: async () => {
+    const response = await api.get('/reports/summary');
     return response.data;
   },
 };

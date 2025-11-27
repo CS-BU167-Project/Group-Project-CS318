@@ -26,6 +26,9 @@ public class AuthenticationServiceImpl implements AuthenticationService {
     @Override
     @Transactional
     public JwtAuthenticationResponse signup(SignUpRequest request) {
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("Email already in use.");
+        }
         var user = User.builder().firstname(request.getFirstname()).lastname(request.getLastname())
                 .email(request.getEmail()).password(passwordEncoder.encode(request.getPassword()))
                 .build();

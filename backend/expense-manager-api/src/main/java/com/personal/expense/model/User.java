@@ -35,6 +35,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "profile_picture", length = 10000000)
+    private byte[] profilePicture;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of();

@@ -85,10 +85,7 @@ function Login() {
           </div>
           
           <div className="space-y-2">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-sm font-medium text-slate-300">Password</label>
-              <a href="#" className="text-xs text-green-400 hover:text-green-300 transition-colors">Forgot password?</a>
-            </div>
+            <label className="text-sm font-medium text-slate-300 ml-1">Password</label>
             <div className="relative group/input">
               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within/input:text-green-400 transition-colors">
                 <Lock size={20} />

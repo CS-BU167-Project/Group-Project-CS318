@@ -3,13 +3,11 @@ import { useState, useEffect, useMemo } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useDashboardData } from './hooks/useDashboardData';
-import { Expense, DailyReport, WeeklyReport, MonthlyReport, CategorySummary } from './types';
-import { expenseAPI, reportAPI } from './api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from 'recharts';
-import { WavyBackground } from "@/components/ui/shadcn-io/wavy-background";
-import { 
+import { Expense } from './types';
+import { expenseAPI } from './api';
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell, ResponsiveContainer, AreaChart, Area } from 'recharts';
+import {  
   LogOut, 
-  User as UserIcon, 
   Plus, 
   Wallet, 
   TrendingUp, 
@@ -20,16 +18,26 @@ import {
   DollarSign,
   CreditCard,
   Activity,
-  Download
+  Download,
+  Utensils,
+  Car,
+  Film,
+  Zap,
+  ShoppingBag,
+  Heart,
+  GraduationCap,
+  Plane,
+  Layers,
+  ChevronDown,
+  Check,
+  Filter
 } from 'lucide-react';
-
-const WAVY_COLORS = ["#22d3ee", "#4ade80", "#2563eb"];
 
 const categories = ['Food', 'Transport', 'Entertainment', 'Utilities', 'Shopping', 'Health', 'Education', 'Travel', 'Other'];
 
 function Main() {
   const navigate = useNavigate();
-  const { user, expenses, summary, monthlyTotal, loading, refreshData } = useDashboardData();
+  const { user, expenses, summary, loading, refreshData } = useDashboardData();
   const [showModal, setShowModal] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [formData, setFormData] = useState({
@@ -41,9 +49,43 @@ function Main() {
   });
 
   const [errorMessage, setErrorMessage] = useState('');
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
   const [chartTab, setChartTab] = useState<'daily' | 'weekly' | 'monthly' | 'category'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [isMonthOpen, setIsMonthOpen] = useState(false);
+  const [isYearOpen, setIsYearOpen] = useState(false);
+
+  const months = [
+    { value: '01', label: 'January' },
+    { value: '02', label: 'February' },
+    { value: '03', label: 'March' },
+    { value: '04', label: 'April' },
+    { value: '05', label: 'May' },
+    { value: '06', label: 'June' },
+    { value: '07', label: 'July' },
+    { value: '08', label: 'August' },
+    { value: '09', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' }
+  ];
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({length: 5}, (_, i) => currentYear - i + 1).sort((a, b) => b - a);
+
+  const getCategoryIcon = (categoryName: string, size: string = "w-5 h-5") => {
+    switch (categoryName) {
+      case 'Food': return <Utensils className={`${size} text-orange-400`} />;
+      case 'Transport': return <Car className={`${size} text-blue-400`} />;
+      case 'Entertainment': return <Film className={`${size} text-purple-400`} />;
+      case 'Utilities': return <Zap className={`${size} text-yellow-400`} />;
+      case 'Shopping': return <ShoppingBag className={`${size} text-pink-400`} />;
+      case 'Health': return <Heart className={`${size} text-red-400`} />;
+      case 'Education': return <GraduationCap className={`${size} text-indigo-400`} />;
+      case 'Travel': return <Plane className={`${size} text-sky-400`} />;
+      default: return <Layers className={`${size} text-slate-400`} />;
+    }
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -55,6 +97,9 @@ function Main() {
     const historyElement = document.getElementById('history-section');
     
     if (!chartsElement || !historyElement) return;
+
+    // Store original tab
+    const originalTab = chartTab;
 
     try {
       const pdf = new jsPDF({
@@ -89,24 +134,39 @@ function Main() {
 
       let currentY = 55;
 
-      // Capture Charts
-      const chartsCanvas = await html2canvas(chartsElement, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        backgroundColor: '#0f172a' // slate-900
-      });
-      
-      const chartsImgData = chartsCanvas.toDataURL('image/png');
-      const chartsHeight = (chartsCanvas.height * contentWidth) / chartsCanvas.width;
-      
-      pdf.setFontSize(12);
-      pdf.setTextColor(15, 23, 42); // Slate-900
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('Analytics Overview', margin, currentY - 5);
-      
-      pdf.addImage(chartsImgData, 'PNG', margin, currentY, contentWidth, chartsHeight);
-      currentY += chartsHeight + 15;
+      // Define tabs to capture
+      const tabsToCapture: ('daily' | 'weekly' | 'monthly')[] = ['daily', 'weekly', 'monthly'];
+
+      for (const tab of tabsToCapture) {
+        // Switch tab and wait for render
+        setChartTab(tab);
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait for re-render and animation
+
+        // Capture Charts
+        const chartsCanvas = await html2canvas(chartsElement, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#0f172a' // slate-900
+        });
+        
+        const chartsImgData = chartsCanvas.toDataURL('image/png');
+        const chartsHeight = (chartsCanvas.height * contentWidth) / chartsCanvas.width;
+        
+        // Check if we need a new page
+        if (currentY + chartsHeight + 20 > pageHeight - margin) {
+            pdf.addPage();
+            currentY = margin + 10;
+        }
+
+        pdf.setFontSize(12);
+        pdf.setTextColor(15, 23, 42); // Slate-900
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(`${tab.charAt(0).toUpperCase() + tab.slice(1)} Analytics`, margin, currentY - 5);
+        
+        pdf.addImage(chartsImgData, 'PNG', margin, currentY, contentWidth, chartsHeight);
+        currentY += chartsHeight + 15;
+      }
 
       // Capture History
       const historyCanvas = await html2canvas(historyElement, {
@@ -123,21 +183,14 @@ function Main() {
       if (currentY + historyHeight + 20 > pageHeight - margin) {
         pdf.addPage();
         currentY = margin + 10;
-        
-        pdf.setFontSize(12);
-        pdf.setTextColor(15, 23, 42);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Transaction History', margin, currentY - 5);
-        
-        pdf.addImage(historyImgData, 'PNG', margin, currentY, contentWidth, historyHeight);
-      } else {
-        pdf.setFontSize(12);
-        pdf.setTextColor(15, 23, 42);
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('Transaction History', margin, currentY - 5);
-        
-        pdf.addImage(historyImgData, 'PNG', margin, currentY, contentWidth, historyHeight);
       }
+        
+      pdf.setFontSize(12);
+      pdf.setTextColor(15, 23, 42);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Transaction History', margin, currentY - 5);
+      
+      pdf.addImage(historyImgData, 'PNG', margin, currentY, contentWidth, historyHeight);
       
       // Footer with page numbers
       const pageCount = pdf.getNumberOfPages();
@@ -151,11 +204,10 @@ function Main() {
       pdf.save(`expense-report-${selectedMonth}.pdf`);
     } catch (error) {
       console.error('Error generating PDF:', error);
+    } finally {
+        // Restore original tab
+        setChartTab(originalTab);
     }
-  };
-
-  const handleProfile = () => {
-    navigate('/profile');
   };
 
   const handleAddExpense = () => {
@@ -338,14 +390,7 @@ function Main() {
   }
 
   return (
-    <WavyBackground 
-      className="w-full h-full flex flex-col overflow-y-auto"
-      containerClassName="h-screen"
-      backgroundFill="black"
-      colors={WAVY_COLORS}
-      waveOpacity={0.3}
-      blur={10}
-    >
+    <div className="min-h-screen w-full bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black flex flex-col overflow-y-auto">
       <div id="dashboard-content" className="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <header className="flex justify-between items-center mb-12">
@@ -356,26 +401,34 @@ function Main() {
             <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard</h1>
           </div>
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800/50 rounded-full border border-slate-700/50 backdrop-blur-sm">
-              <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
-              <span className="text-slate-300 text-sm font-medium">Live Updates</span>
-            </div>
-            <button 
-              onClick={handleDownloadPDF}
-              className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 shadow-lg"
-              title="Download PDF"
-            >
-              <Download className="w-5 h-5" />
-            </button>
             <button 
               onClick={() => navigate('/profile')}
-              className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-white hover:bg-slate-700 transition-all hover:scale-105 active:scale-95 shadow-lg"
+              className="group flex items-center gap-3 pl-2 pr-5 py-2 bg-slate-900/30 hover:bg-emerald-500/10 border border-white/10 hover:border-emerald-500/50 rounded-full transition-all duration-300 backdrop-blur-md"
             >
-              <UserIcon className="w-5 h-5" />
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-bold text-xs shadow-lg overflow-hidden ring-2 ring-transparent group-hover:ring-emerald-400/50 transition-all">
+                {user?.profilePicture ? (
+                  <img 
+                    src={`data:image/jpeg;base64,${user.profilePicture}`} 
+                    alt="Profile" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>{user?.firstname?.charAt(0)}{user?.lastname?.charAt(0)}</span>
+                )}
+              </div>
+              <span className="text-sm font-bold text-slate-300 group-hover:text-emerald-400 transition-colors hidden sm:block whitespace-nowrap">
+                {user?.firstname} {user?.lastname}
+              </span>
             </button>
-            <button onClick={handleLogout} className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-medium transition-all border border-red-500/20">
-              <LogOut className="w-4 h-4" />
-              <span>Logout</span>
+            <button 
+              onClick={handleLogout} 
+              className="group relative px-5 py-2.5 bg-slate-900/30 backdrop-blur-2xl hover:bg-red-500/10 text-slate-300 hover:text-red-400 rounded-full font-bold transition-all duration-300 border border-white/10 hover:border-red-500/50 shadow-lg hover:shadow-red-500/20 active:scale-95 overflow-hidden"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+              <div className="relative z-10 flex items-center gap-2">
+                <LogOut className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
+                <span>Logout</span>
+              </div>
             </button>
           </div>
         </header>
@@ -425,6 +478,97 @@ function Main() {
           </div>
         </div>
         
+        {/* Filters Section */}
+        <div className="mb-8 relative bg-slate-900/30 backdrop-blur-2xl p-6 rounded-3xl border border-white/10 shadow-xl overflow-visible z-20">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none rounded-3xl"></div>
+          <div className="relative z-10 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <h3 className="text-xl font-bold text-white flex items-center gap-2">
+              <Filter className="w-5 h-5 text-emerald-400" />
+              Filters
+            </h3>
+            
+            <div className="flex items-center gap-3">
+              <span className="text-slate-400 text-sm font-medium mr-2">Period:</span>
+              
+              {/* Month Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => { setIsMonthOpen(!isMonthOpen); setIsYearOpen(false); }}
+                  className="min-w-[140px] px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between hover:bg-slate-800 transition-all focus:ring-2 focus:ring-emerald-500/50 outline-none group"
+                >
+                  <span className="font-medium text-white">
+                    {months.find(m => m.value === selectedMonth.split('-')[1])?.label || 'Month'}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isMonthOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isMonthOpen && (
+                  <div className="absolute top-full left-0 mt-2 w-full bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar z-50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                    <div className="relative z-10 p-1">
+                      {months.map(month => (
+                        <button
+                          key={month.value}
+                          onClick={() => {
+                            const [y] = selectedMonth.split('-');
+                            setSelectedMonth(`${y}-${month.value}`);
+                            setIsMonthOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            selectedMonth.split('-')[1] === month.value 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : 'text-slate-300 hover:bg-white/5'
+                          }`}
+                        >
+                          {month.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Year Dropdown */}
+              <div className="relative">
+                <button
+                  onClick={() => { setIsYearOpen(!isYearOpen); setIsMonthOpen(false); }}
+                  className="min-w-[100px] px-4 py-2.5 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between hover:bg-slate-800 transition-all focus:ring-2 focus:ring-emerald-500/50 outline-none group"
+                >
+                  <span className="font-medium text-white">
+                    {selectedMonth.split('-')[0]}
+                  </span>
+                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isYearOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isYearOpen && (
+                  <div className="absolute top-full right-0 mt-2 w-full bg-slate-900/90 backdrop-blur-xl border border-white/10 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar z-50">
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                    <div className="relative z-10 p-1">
+                      {years.map(year => (
+                        <button
+                          key={year}
+                          onClick={() => {
+                            const [, m] = selectedMonth.split('-');
+                            setSelectedMonth(`${year}-${m}`);
+                            setIsYearOpen(false);
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            parseInt(selectedMonth.split('-')[0]) === year 
+                              ? 'bg-emerald-500/20 text-emerald-400' 
+                              : 'text-slate-300 hover:bg-white/5'
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
           {/* Charts Section */}
@@ -434,20 +578,31 @@ function Main() {
                 <Activity className="w-5 h-5 text-blue-400" />
                 Analytics
               </h3>
-              <div className="flex bg-slate-950/50 border border-slate-800/50 p-1.5 rounded-full backdrop-blur-md">
-                {(['daily', 'weekly', 'monthly'] as const).map((tab) => (
-                  <button
-                    key={tab}
-                    onClick={() => setChartTab(tab)}
-                    className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
-                      chartTab === tab 
-                        ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-105' 
-                        : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
-                    }`}
+              <div className="relative bg-slate-900/30 backdrop-blur-2xl border border-white/10 p-1.5 rounded-full overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+                <div className="relative z-10 flex items-center">
+                  <button 
+                    onClick={handleDownloadPDF}
+                    className="w-10 h-10 rounded-full flex items-center justify-center text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition-all"
+                    title="Download PDF"
                   >
-                    {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    <Download className="w-5 h-5" />
                   </button>
-                ))}
+                  <div className="w-px h-4 bg-white/10 mx-1"></div>
+                  {(['daily', 'weekly', 'monthly'] as const).map((tab) => (
+                    <button
+                      key={tab}
+                      onClick={() => setChartTab(tab)}
+                      className={`px-6 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
+                        chartTab === tab 
+                          ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/25 scale-105' 
+                          : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -527,14 +682,19 @@ function Main() {
             {/* Quick Add */}
             <button 
               onClick={handleAddExpense}
-              className="w-full py-4 bg-gradient-to-r from-emerald-500 to-emerald-700 hover:from-emerald-600 hover:to-emerald-800 text-white rounded-3xl font-bold text-lg shadow-xl shadow-emerald-500/20 transition-all transform hover:scale-[1.02] flex items-center justify-center gap-2"
+              className="w-full relative py-4 bg-slate-900/30 backdrop-blur-2xl hover:bg-emerald-500/20 text-emerald-400 hover:text-emerald-300 rounded-3xl font-bold text-lg border border-white/10 hover:border-emerald-500/30 shadow-xl shadow-emerald-500/10 transition-all transform hover:scale-[1.02] overflow-hidden group"
             >
-              <Plus className="w-6 h-6" />
-              Add New Expense
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+              <div className="relative z-10 flex items-center justify-center gap-2">
+                <Plus className="w-6 h-6" />
+                Add New Expense
+              </div>
             </button>
 
             {/* Recent List */}
-            <div className="flex-1 bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl overflow-hidden flex flex-col">
+            <div className="flex-1 bg-slate-900/30 backdrop-blur-2xl p-6 rounded-3xl border border-white/10 shadow-xl overflow-hidden flex flex-col relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+              <div className="relative z-10 flex flex-col h-full">
               <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-green-400" />
                 Recent
@@ -543,15 +703,8 @@ function Main() {
                 {expenses.slice(0, 5).map((expense) => (
                   <div key={expense.id} className="flex items-center justify-between p-3 bg-slate-800/40 rounded-2xl border border-slate-700/30 hover:bg-slate-800/60 transition-colors group">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center text-xl">
-                        {expense.category.name === 'Food' ? '🍔' : 
-                         expense.category.name === 'Transport' ? '🚗' : 
-                         expense.category.name === 'Entertainment' ? '🎬' : 
-                         expense.category.name === 'Utilities' ? '💡' :
-                         expense.category.name === 'Shopping' ? '🛍️' :
-                         expense.category.name === 'Health' ? '💊' :
-                         expense.category.name === 'Education' ? '📚' :
-                         expense.category.name === 'Travel' ? '✈️' : '📦'}
+                      <div className="w-10 h-10 rounded-full bg-slate-700/50 flex items-center justify-center">
+                        {getCategoryIcon(expense.category.name)}
                       </div>
                       <div>
                         <p className="text-white font-medium text-sm">{expense.description}</p>
@@ -588,9 +741,12 @@ function Main() {
                   </div>
                 )}
               </div>
+              </div>
             </div>
           </div>
         </div>
+
+
 
         {/* All Transactions Table */}
         <section id="history-section" className="bg-slate-900/60 backdrop-blur-xl p-6 rounded-3xl border border-slate-800/60 shadow-xl">
@@ -599,12 +755,6 @@ function Main() {
               <CreditCard className="w-5 h-5 text-purple-400" />
               Transaction History
             </h3>
-            <input
-              type="month"
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="bg-slate-800 border border-slate-700 text-white text-sm rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block p-2.5 outline-none"
-            />
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
@@ -670,43 +820,85 @@ function Main() {
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex justify-center items-center z-50 p-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-3xl p-8 w-full max-w-md shadow-2xl transform transition-all scale-100">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 p-4">
+          <div className="bg-slate-900/30 backdrop-blur-2xl border border-white/10 rounded-3xl p-8 w-full max-w-lg shadow-2xl transform transition-all scale-100 relative overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
+            <div className="relative z-10">
             <div className="flex justify-center items-center mb-8">
-              <h3 className="text-2xl font-bold text-white">{editingExpense ? 'Edit Expense' : 'New Expense'}</h3>
+              <h3 className="text-2xl font-bold text-white drop-shadow-md">{editingExpense ? 'Edit Expense' : 'New Expense'}</h3>
             </div>
+            
             <form className="space-y-6" onSubmit={handleSubmit}>
+              {/* Amount Input - Prominent */}
+              <div className="relative">
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 ml-1">Amount</label>
+                <div className="relative group">
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xl font-medium group-focus-within:text-emerald-500 transition-colors">$</span>
+                  <input 
+                    type="number" 
+                    name="amount" 
+                    value={formData.amount} 
+                    onChange={handleInputChange} 
+                    required 
+                    step="0.01" 
+                    placeholder="0.00"
+                    className="w-full pl-10 pr-4 py-4 bg-slate-800/50 border border-slate-700 rounded-2xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white text-3xl font-bold placeholder-slate-600 transition-all"
+                  />
+                </div>
+              </div>
+
+              {/* Category Dropdown - Custom */}
+              <div className="relative">
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 ml-1">Category</label>
+                <button
+                  type="button"
+                  onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl flex items-center justify-between hover:bg-slate-800 transition-all focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none group"
+                >
+                  <span className="font-bold text-emerald-400">{formData.categoryName}</span>
+                  <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {isCategoryOpen && (
+                  <div className="absolute z-10 mt-2 w-full bg-slate-800 border border-slate-700 rounded-xl shadow-xl overflow-hidden max-h-60 overflow-y-auto custom-scrollbar">
+                    <div className="p-1.5 space-y-1">
+                      {categories.map(cat => (
+                        <button
+                          key={cat}
+                          type="button"
+                          onClick={() => {
+                            setFormData({...formData, categoryName: cat});
+                            setIsCategoryOpen(false);
+                          }}
+                          className={`flex items-center gap-3 w-full p-3 rounded-lg transition-all ${formData.categoryName === cat ? 'bg-emerald-500/10 text-emerald-400' : 'hover:bg-slate-700/50 text-slate-300'}`}
+                        >
+                          <span className="font-medium text-sm flex-1 text-left">{cat}</span>
+                          {formData.categoryName === cat && <Check className="w-4 h-4 flex-shrink-0" />}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Description</label>
+                <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 ml-1">Description</label>
                 <input 
                   type="text" 
                   name="description" 
                   value={formData.description} 
                   onChange={handleInputChange} 
                   required 
-                  placeholder="e.g. Grocery shopping"
+                  placeholder="What was this for?"
                   className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
                 />
               </div>
+
+              {/* Date & Time */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Amount</label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-3 text-slate-500">$</span>
-                    <input 
-                      type="number" 
-                      name="amount" 
-                      value={formData.amount} 
-                      onChange={handleInputChange} 
-                      required 
-                      step="0.01" 
-                      placeholder="0.00"
-                      className="w-full pl-8 pr-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white placeholder-slate-600 transition-all"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Date</label>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 ml-1">Date</label>
                   <input 
                     type="date" 
                     name="date" 
@@ -717,7 +909,7 @@ function Main() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">Time</label>
+                  <label className="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2 ml-1">Time</label>
                   <input 
                     type="time" 
                     name="time" 
@@ -728,37 +920,31 @@ function Main() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-400 mb-2">Category</label>
-                <select 
-                  name="categoryName" 
-                  value={formData.categoryName} 
-                  onChange={handleInputChange} 
-                  className="w-full px-4 py-3 bg-slate-800/50 border border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none text-white transition-all appearance-none"
-                >
-                  {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                </select>
-              </div>
-              {errorMessage && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20">{errorMessage}</p>}
-              <div className="flex gap-3 mt-8">
+
+              {errorMessage && <p className="text-red-400 text-sm bg-red-500/10 p-3 rounded-lg border border-red-500/20 flex items-center gap-2">⚠️ {errorMessage}</p>}
+              
+              <div className="flex gap-3 mt-8 pt-4 border-t border-slate-800">
                 <button 
                   type="button" 
-                  className="flex-1 px-4 py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors" 
+                  className="flex-1 px-4 py-3.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium transition-colors" 
                   onClick={() => setShowModal(false)}
                 >
                   Cancel
                 </button>
                 <button 
                   type="submit" 
-                  className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors shadow-lg shadow-emerald-500/20"
+                  className="flex-1 px-4 py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:scale-[1.02] active:scale-[0.98]"
                 >
                   {editingExpense ? 'Save Changes' : 'Add Expense'}
                 </button>
               </div>
             </form>
+            </div>
           </div>
         </div>
       )}
-      </WavyBackground>
+    </div>
   );
-}export default Main;
+}
+
+export default Main;

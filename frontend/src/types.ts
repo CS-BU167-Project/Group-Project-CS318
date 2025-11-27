@@ -3,6 +3,7 @@ export interface User {
   firstname: string;
   lastname: string;
   email: string;
+  profilePicture?: string;
 }
 
 export interface Expense {

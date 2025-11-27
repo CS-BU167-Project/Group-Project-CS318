@@ -32,8 +32,9 @@ public class SecurityConfig {
                            CorsConfigurationSource corsConfigurationSource) throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(cors -> cors.configurationSource(corsConfigurationSource))
-        .authorizeHttpRequests(request -> request.requestMatchers("/api/v1/auth/**")
-            .permitAll().anyRequest().authenticated())
+        .authorizeHttpRequests(request -> request
+            .requestMatchers("/api/v1/auth/signup", "/api/v1/auth/signin", "/error").permitAll()
+            .anyRequest().authenticated())
         .sessionManagement(manager -> manager.sessionCreationPolicy(STATELESS))
         .authenticationProvider(authenticationProvider(userService)).addFilterBefore(
             jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

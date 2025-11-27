@@ -36,6 +36,11 @@ public class ExpenseServiceImpl implements ExpenseService {
     }
 
     @Override
+    public List<Expense> findByUserId(Long userId) {
+        return expenseRepository.findByUserId(userId);
+    }
+
+    @Override
     public Expense findById(Long id) {
         return expenseRepository.findById(id).orElse(null);
     }

@@ -18,10 +18,10 @@ export const useDashboardData = () => {
       const allExpenses = await expenseAPI.getAllExpenses();
       setExpenses(allExpenses);
 
-      const summaryData = await reportAPI.getSummary(profile.id);
+      const summaryData = await reportAPI.getSummary();
       setSummary(summaryData);
 
-      const monthlyReport = await reportAPI.getMonthlyReport(profile.id);
+      const monthlyReport = await reportAPI.getMonthlyReport();
       const allMonthlyExpenses = Object.values(monthlyReport).flat() as Expense[];
       const total = allMonthlyExpenses.reduce((sum: number, exp: Expense) => sum + exp.amount, 0);
       setMonthlyTotal(total);

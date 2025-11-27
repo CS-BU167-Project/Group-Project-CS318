@@ -32,7 +32,7 @@ function Landing() {
       {/* Hero Content */}
       <div className="flex-1 flex flex-col items-center justify-center text-center px-4 pb-20">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-slate-700 bg-slate-900/50 backdrop-blur-md text-slate-300 text-sm font-medium">
-          ✨ Smart Financial Management
+           Smart Financial Management
         </div>
         <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white tracking-tight mb-6">
           Master Your <br />

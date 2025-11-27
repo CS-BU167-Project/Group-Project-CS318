@@ -1,9 +1,11 @@
 package com.personal.expense.controller;
 
 import com.personal.expense.model.Expense;
+import com.personal.expense.model.User;
 import com.personal.expense.service.ExpenseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,8 +18,9 @@ public class ExpenseController {
     private final ExpenseService expenseService;
 
     @GetMapping
-    public ResponseEntity<List<Expense>> getAllExpenses() {
-        return ResponseEntity.ok(expenseService.findAll());
+    public ResponseEntity<List<Expense>> getAllExpenses(Authentication authentication) {
+        User user = (User) authentication.getPrincipal();
+        return ResponseEntity.ok(expenseService.findByUserId(user.getId()));
     }
 
     @GetMapping("/{id}")

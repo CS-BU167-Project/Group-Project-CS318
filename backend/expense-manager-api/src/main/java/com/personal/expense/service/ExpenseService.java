@@ -7,6 +7,7 @@ import java.util.List;
 public interface ExpenseService {
     Expense save(Expense expense);
     List<Expense> findAll();
+    List<Expense> findByUserId(Long userId);
     Expense findById(Long id);
     void deleteById(Long id);
 }
